@@ -11,12 +11,13 @@ provider "azurerm" {
   features {}
 }
 
+# 1. Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "my-gha-rg02"
+  name     = "my-gha-rg03"
   location = "East US"
 }
 
-
+# 2. Virtual Network
 resource "azurerm_virtual_network" "vnet" {
   name                = "my-vnet"
   address_space       = ["10.0.0.0/16"]
@@ -24,6 +25,7 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
+# 3. Subnet
 resource "azurerm_subnet" "subnet" {
   name                 = "my-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -31,6 +33,7 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
+# 4. Public IP
 resource "azurerm_public_ip" "pip" {
   name                = "my-public-ip"
   location            = azurerm_resource_group.rg.location
@@ -39,6 +42,7 @@ resource "azurerm_public_ip" "pip" {
   sku                 = "Standard"
 }
 
+# 5. Network Security Group (Allow SSH)
 resource "azurerm_network_security_group" "nsg" {
   name                = "my-nsg"
   location            = azurerm_resource_group.rg.location
@@ -57,6 +61,13 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
+# 6. Associate NSG to Subnet (Required for access)
+resource "azurerm_subnet_network_security_group_association" "nsg_assoc" {
+  subnet_id                 = azurerm_subnet.subnet.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+# 7. Network Interface
 resource "azurerm_network_interface" "nic" {
   name                = "my-nic"
   location            = azurerm_resource_group.rg.location
@@ -70,18 +81,19 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
+# 8. Linux Virtual Machine (Password Login Enabled)
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = "my-linux-vm"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B1s"
   admin_username      = "azureuser"
+  admin_password      = "Admin@rg02vm01"                 # ✅ Password for login
+  disable_password_authentication = false            # ✅ Enable password login
 
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
-
-  admin_password = "Admin@vm01"   # For demo (not recommended in prod)
 
   os_disk {
     caching              = "ReadWrite"
