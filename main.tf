@@ -13,7 +13,7 @@ provider "azurerm" {
 
 # 1. Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "my-gha-rg02"
+  name     = "my-gha-rg03"
   location = "East US"
 }
 
