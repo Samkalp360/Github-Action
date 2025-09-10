@@ -69,13 +69,14 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
+
 resource "azurerm_linux_virtual_machine" "vm" {
   name                            = "my-linux-vm05"
   resource_group_name             = azurerm_resource_group.rg.name
   location                        = azurerm_resource_group.rg.location
   size                            = "Standard_B1s"
   admin_username                  = "azureuser"
-  admin_password                  = "Admin@rg02vm01"  # Password login (not recommended in prod)
+  admin_password                  = "Admin@rg02vm01" # Password login (not recommended in prod)
   disable_password_authentication = false
 
   network_interface_ids = [
