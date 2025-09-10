@@ -11,35 +11,53 @@ provider "azurerm" {
   features {}
 }
 
+# Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "my-gha-rg01"
+  name     = "gha-vm-rg"
   location = "East US"
 }
 
-
+# Virtual Network
 resource "azurerm_virtual_network" "vnet" {
-  name                = "my-vnet"
+  name                = "gha-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }
 
+# Subnet
 resource "azurerm_subnet" "subnet" {
-  name                 = "my-subnet"
+  name                 = "gha-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-resource "azurerm_public_ip" "pip" {
-  name                = "my-public-ip"
+# Public IP
+resource "azurerm_public_ip" "public_ip" {
+  name                = "gha-public-ip"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Dynamic"
 }
 
+# Network Interface
+resource "azurerm_network_interface" "nic" {
+  name                = "gha-nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
+  }
+}
+
+# NSG + rule to allow SSH
 resource "azurerm_network_security_group" "nsg" {
-  name                = "my-nsg"
+  name                = "gha-nsg"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -56,31 +74,27 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
-resource "azurerm_network_interface" "nic" {
-  name                = "my-nic"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip.id
-  }
+# Associate NSG with NIC
+resource "azurerm_network_interface_security_group_association" "nic_nsg_assoc" {
+  network_interface_id      = azurerm_network_interface.nic.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
+# Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = "my-linux-vm"
+  name                = "gha-vm"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B1s"
   admin_username      = "azureuser"
-
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
 
-  admin_password = "Admin@vm01"   # For demo (not recommended in prod)
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("~/.ssh/id_rsa.pub")  # ⚠️ Change this path if needed
+  }
 
   os_disk {
     caching              = "ReadWrite"
@@ -89,8 +103,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   source_image_reference {
     publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-focal"
-    sku       = "20_04-lts-gen2"
+    offer     = "UbuntuServer"
+    sku       = "18.04-LTS"
     version   = "latest"
   }
 }
