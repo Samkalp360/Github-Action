@@ -16,6 +16,7 @@ resource "azurerm_resource_group" "rg" {
   location = "East US"
 }
 
+
 resource "azurerm_virtual_network" "vnet" {
   name                = "my-vnet05"
   address_space       = ["10.1.0.0/16"]
@@ -70,17 +71,20 @@ resource "azurerm_network_interface" "nic" {
 }
 
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                            = "my-linux-vm05"
-  resource_group_name             = azurerm_resource_group.rg.name
-  location                        = azurerm_resource_group.rg.location
-  size                            = "Standard_B1s"
-  admin_username                  = "azureuser"
-  admin_password                  = "Admin@rg02vm01"  # Password login (not recommended in prod)
-  disable_password_authentication = false
+  name                = "my-linux-vm05"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  size                = "Standard_B1s"
+  admin_username      = "azureuser"
+  admin_password      = "Admin@rg02vm01"                 # ✅ Password for login
+  disable_password_authentication = false 
 
+  
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
+
+  #admin_password = "Admin@vm01"   # For demo (not recommended in prod)
 
   os_disk {
     caching              = "ReadWrite"
